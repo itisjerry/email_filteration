@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Email List Filter Pro</title>
+<!-- Icons & SheetJS -->
+<script defer src="https://unpkg.com/feather-icons"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container" id="app">
+    <div class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"><i data-feather="filter"></i></div>
+        <div>
+          <h1>Email List Filter Pro</h1>
+          <div class="sub">Part 1: Clean & Segment • Part 2: Compare New vs Previous</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="resetBtn" title="Start over" accesskey="r" aria-label="Start Over (Alt+Shift+R)"><i data-feather="refresh-ccw"></i>Start Over</button>
+        <button class="btn" id="sampleBtn" accesskey="s" aria-label="Load Sample Data (Alt+Shift+S)"><i data-feather="zap"></i>Sample</button>
+        <button class="btn" id="testBtn" accesskey="t" aria-label="Run Self-Test (Alt+Shift+T)"><i data-feather="check-square"></i>Self-Test</button>
+      </div>
+    </div>
+
+    <!-- ========================= Part 1 ========================= -->
+    <section class="card" aria-labelledby="p1title">
+      <h2 id="p1title">Part 1 — Upload & Clean</h2>
+      <div id="drop" class="drop" tabindex="0" aria-label="Upload area" aria-describedby="dropHelp">
+        <p><i data-feather="upload-cloud" aria-hidden="true"></i></p>
+        <p><strong>Drag & drop</strong> Excel/CSV files or <label for="file" class="btn"><i data-feather="file-plus"></i>Select files</label></p>
+        <input id="file" type="file" multiple accept=".xlsx,.xls,.csv" style="display:none;" aria-label="Upload files" />
+        <p id="dropHelp" class="sub">We’ll merge <em>Complete Leads</em> (preferred) → <em>Leads Title</em> → first sheet (fallback). All processing is local.</p>
+        <div id="p1Badges" class="stack" aria-live="polite" aria-atomic="true"></div>
+      </div>
+
+      <div id="workArea" class="hidden" aria-live="polite" aria-busy="true">
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="bar"></div></div>
+        <div class="status"><i data-feather="loader" class="spin" aria-hidden="true"></i><span id="statusText">Waiting for files…</span></div>
+      </div>
+
+      <div class="stats" role="group" aria-label="Cleaning statistics">
+        <div class="stat"><div class="k" id="rowsBefore">—</div><div class="l">Rows (before)</div></div>
+        <div class="stat"><div class="k" id="rowsAfter">—</div><div class="l">Rows (after)</div></div>
+        <div class="stat"><div class="k" id="dupePct">—</div><div class="l">Duplicates removed</div></div>
+        <div class="stat"><div class="k" id="uniqueCompanies">—</div><div class="l">Unique companies</div></div>
+        <div class="stat"><div class="k" id="segmentCount">—</div><div class="l">Irrelevant segment</div></div>
+      </div>
+
+      <div class="footer">
+        <div class="stack">
+          <button class="btn primary" id="cleanBtn" disabled accesskey="c" aria-label="Clean Data (Alt+Shift+C)"><i data-feather="play"></i>Clean Data</button>
+          <button class="btn ok" id="downloadXLSX" disabled title="Download a 3-sheet Excel workbook" accesskey="d" aria-label="Download Workbook (Alt+Shift+D)"><i data-feather="download"></i>Download Workbook</button>
+        </div>
+        <div class="tips">Email is the unique key. We match by email but copy the <em>entire row</em>. 100% local.</div>
+      </div>
+
+      <div id="stickyActions" class="sticky-actions" aria-live="polite">
+        <span class="tips" id="stickyMsg">Results ready.</span>
+        <div class="stack">
+          <button class="btn ok" id="downloadXLSX2" disabled><i data-feather="download"></i>Download Workbook</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================= Settings (Configurable keywords & domains) ========================= -->
+    <section class="card" aria-labelledby="settingsTitle">
+      <div class="setting-header" style="margin-bottom:12px">
+        <h2 id="settingsTitle" style="margin:0;display:flex;align-items:center;gap:8px"><i data-feather="sliders"></i>Segmentation Settings</h2>
+        <span class="pill"><i data-feather="zap"></i> Live apply</span>
+      </div>
+      <div class="settings-wrap">
+        <details open>
+          <summary class="sub" style="cursor:pointer;list-style:none"><span style="display:inline-flex;align-items:center;gap:8px"><i data-feather="tune"></i><strong>Rules</strong> — adjust keywords and denied domains</span></summary>
+          <div class="settings-grid" style="margin-top:10px">
+            <div class="setting">
+              <div class="setting-header">
+                <div class="setting-title"><i data-feather="hash"></i>Keywords & phrases</div>
+                <span class="pill" title="Search is case-insensitive"><i data-feather="search"></i>case-insensitive</span>
+              </div>
+              <textarea id="kwInput" class="textarea" rows="4">architect, owner, planroom, engineer, equipment,
+legal, press, newspaper, food, food service, designer, designers,
+photographer, photo graphic, financial, financial service, rental, rentals,
+municipal, mmunicipal</textarea>
+              <div class="helper">
+                <span>Matched in <strong>Industry Value</strong>.</span>
+                <span class="tips"><span id="kwCount">0</span> terms • whole-word for single words</span>
+              </div>
+              <div id="kwChips" class="chipbar"></div>
+              <div class="presetbar">
+                <span class="preset" data-preset="legal, press, newspaper">Add: Media</span>
+                <span class="preset" data-preset="designer, designers, photographer, photo graphic">Add: Creative</span>
+                <span class="preset" data-preset="food, food service, equipment, rental, rentals">Add: Services</span>
+              </div>
+              <div id="regexPreview" class="regex-preview hidden"></div>
+            </div>
+            <div class="setting">
+              <div class="setting-header">
+                <div class="setting-title"><i data-feather="at-sign"></i>Denied email domains</div>
+                <span class="pill"><i data-feather="shield-off"></i>filtered</span>
+              </div>
+              <textarea id="denyInput" class="textarea" rows="4">mailinator.com, yopmail.com, 10minutemail.com</textarea>
+              <div class="helper">
+                <span>Applies to <strong>Email</strong> domain (e.g., example.com).</span>
+                <span class="tips"><span id="denyCount">0</span> domains</span>
+              </div>
+              <div id="denyChips" class="chipbar"></div>
+              <div class="presetbar">
+                <span class="preset" data-preset="tempmail.com, fakeinbox.com">Add: Temp Mail</span>
+                <span class="preset" data-preset="dispostable.com, guerrillamail.com">Add: Disposable</span>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ========================= Part 2 ========================= -->
+    <section class="card" aria-labelledby="p2title">
+      <h2 id="p2title">Part 2 — Compare New vs Previous</h2>
+      <p class="sub">Upload the <strong>Previous</strong> workbook (older run) and the <strong>New Processed</strong> workbook (from Part 1). We’ll output only emails that are <em>new</em> compared to previous — with full rows preserved.</p>
+
+      <div class="compare-row" style="margin:10px 0 6px">
+        <div class="compare-item">
+          <div class="compare-left">
+            <label class="btn ghost" for="prevFile" style="margin:0"><i data-feather="archive"></i>Previous workbook</label>
+          </div>
+          <div class="compare-right">
+            <span id="prevBadge" class="badge hidden"></span>
+            <span id="prevLabel" class="filename truncate">No file selected</span>
+            <button id="clearPrev" class="btn icon" title="Clear"><i data-feather="x"></i></button>
+            <input id="prevFile" type="file" accept=".xlsx,.xls" style="display:none" />
+          </div>
+        </div>
+        <div class="compare-item">
+          <div class="compare-left">
+            <label class="btn ghost" for="newFile" style="margin:0"><i data-feather="layers"></i>New processed workbook</label>
+          </div>
+          <div class="compare-right">
+            <span id="newBadge" class="badge hidden"></span>
+            <span id="newLabel" class="filename truncate">No file selected</span>
+            <button id="clearNew" class="btn icon" title="Clear"><i data-feather="x"></i></button>
+            <input id="newFile" type="file" accept=".xlsx,.xls" style="display:none" />
+          </div>
+        </div>
+      </div>
+
+      <div id="workArea2" class="hidden" aria-live="polite" aria-busy="true">
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div id="bar2"></div></div>
+        <div class="status"><i data-feather="loader" class="spin" aria-hidden="true"></i><span id="statusText2">Waiting for files…</span></div>
+      </div>
+
+      <div class="stats-compact">
+        <div class="stat"><div class="k" id="prevCount">—</div><div class="l">Previous emails</div></div>
+        <div class="stat"><div class="k" id="newCount">—</div><div class="l">New emails</div></div>
+        <div class="stat"><div class="k" id="newOnlyRelCount">—</div><div class="l">Relevant — New Only</div></div>
+        <div class="stat"><div class="k" id="newOnlyIrrelCount">—</div><div class="l">Irrelevant — New Only</div></div>
+      </div>
+
+      <div class="footer">
+        <div class="stack">
+          <button class="btn primary" id="compareBtn" disabled><i data-feather="search"></i>Compare & Build New-Only</button>
+          <button class="btn ok" id="downloadCompare" disabled title="Download New-Only workbook"><i data-feather="download-cloud"></i>Download New-Only</button>
+        </div>
+        <div class="tips">Primary key is <em>Email</em>. Matching carries the entire row from the new file.</div>
+      </div>
+    </section>
+
+    <!-- ========================= Diagnostics ========================= -->
+    <section class="card">
+      <h2>Diagnostics</h2>
+      <div id="testOut">Click <strong>Self-Test</strong> to run built-in checks.</div>
+    </section>
+  </div>
+
+<script src="app.js"></script>
+</body>
+</html>
